@@ -9,8 +9,8 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,7 +20,6 @@ import java.util.List;
 import static java.nio.file.Files.copy;
 import static java.nio.file.Paths.get;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
-import static java.util.List.*;
 
 @RestController
 @RequestMapping("file")
@@ -32,6 +31,12 @@ public class FileResource {
     public ResponseEntity<List<String>> upload(@RequestParam("files") List<MultipartFile> multipartFiles) throws IOException {
 
         List<String> filenames = new ArrayList<>();
+
+        File directory = new File(DIRECTORY);
+
+        if (!directory.exists()) {
+            directory.mkdir();
+        }
 
         for (MultipartFile file : multipartFiles) {
             String filename = StringUtils.cleanPath(file.getOriginalFilename());
@@ -47,14 +52,14 @@ public class FileResource {
     public ResponseEntity<Resource> downloadFile(@PathVariable("filename") String filename) throws IOException {
         Path filePath = get(DIRECTORY).toAbsolutePath().normalize().resolve(filename);
 
-        if(!Files.exists(filePath)) {
+        if (!Files.exists(filePath)) {
             throw new FileAlreadyExistsException(filename + " not found");
         } else {
             Resource resource = new UrlResource(filePath.toUri());
             HttpHeaders httpHeaders = new HttpHeaders();
             httpHeaders.add("File-Name", filename);
 //            httpHeaders.add(HttpHeaders.CONTENT_DISPOSITION, "attachment:File-Name="+ filename);
-            httpHeaders.add(HttpHeaders.CONTENT_DISPOSITION, "attachment:File-Name="+ resource.getFilename());
+            httpHeaders.add(HttpHeaders.CONTENT_DISPOSITION, "attachment:File-Name=" + resource.getFilename());
 
             return ResponseEntity
                     .ok()
