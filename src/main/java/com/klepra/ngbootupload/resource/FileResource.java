@@ -1,71 +1,42 @@
 package com.klepra.ngbootupload.resource;
 
+import com.klepra.ngbootupload.service.FileService;
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.FileAlreadyExistsException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
-
-import static java.nio.file.Files.copy;
-import static java.nio.file.Paths.get;
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
 @RestController
 @RequestMapping("file")
+@AllArgsConstructor
+@Slf4j
 public class FileResource {
 
     public static final String DIRECTORY = System.getProperty("user.home") + "/Downloads/ng-boot-uploads/";
 
+    private final FileService fileService;
+
     @PostMapping("upload")
     public ResponseEntity<List<String>> upload(@RequestParam("files") List<MultipartFile> multipartFiles) throws IOException {
-
-        List<String> filenames = new ArrayList<>();
-
-        File directory = new File(DIRECTORY);
-
-        if (!directory.exists()) {
-            directory.mkdir();
-        }
-
-        for (MultipartFile file : multipartFiles) {
-            String filename = StringUtils.cleanPath(file.getOriginalFilename());
-            Path fileStorage = get(DIRECTORY, filename).toAbsolutePath().normalize();
-            copy(file.getInputStream(), fileStorage, REPLACE_EXISTING);
-            filenames.add(filename);
-        }
-
-        return ResponseEntity.ok(filenames);
+        log.info("Uploading files");
+        List<String> newFilenames = fileService.upload(multipartFiles);
+        return ResponseEntity.ok(newFilenames);
     }
 
     @GetMapping("download/{filename}")
     public ResponseEntity<Resource> downloadFile(@PathVariable("filename") String filename) throws IOException {
-        Path filePath = get(DIRECTORY).toAbsolutePath().normalize().resolve(filename);
+        log.info("Downloading file {}", filename);
+        return fileService.downloadFile(filename);
+    }
 
-        if (!Files.exists(filePath)) {
-            throw new FileAlreadyExistsException(filename + " not found");
-        } else {
-            Resource resource = new UrlResource(filePath.toUri());
-            HttpHeaders httpHeaders = new HttpHeaders();
-            httpHeaders.add("File-Name", filename);
-//            httpHeaders.add(HttpHeaders.CONTENT_DISPOSITION, "attachment:File-Name="+ filename);
-            httpHeaders.add(HttpHeaders.CONTENT_DISPOSITION, "attachment:File-Name=" + resource.getFilename());
-
-            return ResponseEntity
-                    .ok()
-                    .contentType(MediaType.parseMediaType(Files.probeContentType(filePath)))
-                    .headers(httpHeaders)
-                    .body(resource);
-        }
+    @GetMapping("list")
+    public List<String> getAllUploadedFiles() {
+        log.info("Fetching all uploaded filenames");
+        return fileService.getAllUploadedFiles();
     }
 }

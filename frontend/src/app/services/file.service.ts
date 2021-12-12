@@ -7,7 +7,7 @@ import { Observable } from 'rxjs';
 })
 export class FileService {
 
-  private server = 'http://localhost:8080';
+  private serverUrl = 'http://localhost:8080';
 
   constructor(private http: HttpClient) { }
 
@@ -20,7 +20,7 @@ export class FileService {
       formData.append('files', file, file.name)
     }
 
-    return this.http.post<String[]>(`${this.server}/file/upload`, formData, {
+    return this.http.post<String[]>(`${this.serverUrl}/file/upload`, formData, {
       reportProgress: true,
       observe: 'events'
     });
@@ -28,10 +28,14 @@ export class FileService {
 
   download(filename: string): Observable<HttpEvent<Blob>> {
 
-    return this.http.get(`${this.server}/file/download/${filename}`, {
+    return this.http.get(`${this.serverUrl}/file/download/${filename}`, {
       reportProgress: true,
       observe: 'events',
       responseType: 'blob',
     });
+  }
+
+  listAllUploads(): Observable<string[]> {
+    return this.http.get<string[]>(`${this.serverUrl}/file/list`);
   }
 }
